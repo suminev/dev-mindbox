@@ -21,7 +21,7 @@ spec:
         spec:
             containers:
             - name: my-web-app
-                image: my-web-app:latest # Имя образа приложения
+                image: my-web-app:v1.0.0 # Имя образа приложения
                 ports:
                 - containerPort: 80 # Порт, который приложение использует
                 resources:
@@ -69,7 +69,7 @@ spec:
 
 # Автомасштабирование
 ---
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
     name: my-web-app-hpa
@@ -78,7 +78,7 @@ spec:
         apiVersion: apps/v1
         kind: Deployment
         name: my-web-app
-    minReplicas: 3 # Минимальное количество реплик для стандартной нагрузки
+    minReplicas: 2 # Минимальное количество реплик для стандартной нагрузки
     maxReplicas: 4 # Максимальное количество реплик для пиковой нагрузки
     metrics: # Целевое использование CPU для автоматического масштабирования
     - type: Resource
