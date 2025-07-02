@@ -1,47 +1,68 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-app
-
----
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-app
-  namespace: ns-app
+  name: my-web-app
   labels:
-    app: web-app
+    app: my-web-app
 spec:
-  replicas: 1
+  replicas: 3  # Запускаем 3 реплики приложения для обеспечения высокой доступности и нагрузки
   selector:
     matchLabels:
-      app: web-app
+      app: my-web-app
   template:
     metadata:
       labels:
-        app: web-app
+        app: my-web-app
     spec:
       containers:
-      - name: web-app
-        image: ""
+      - name: my-web-app
+        image: my-web-app:latest  # Имя образа приложения
         ports:
-        - containerPort: 8080
-      imagePullSecrets:
-      - name: regcred
+        - containerPort: 80  # Порт, который приложение использует
+        readinessProbe:  # Проверка готовности контейнера
+          httpGet:
+            path: /health  # Путь для проверки готовности
+            port: 80
+          initialDelaySeconds: 10  # Задержка перед первой проверкой готовности
+          periodSeconds: 5  # Период проверки готовности
+        livenessProbe:  # Проверка живости контейнера
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30  # Задержка перед первой проверкой живости
+          periodSeconds: 10  # Период проверки живости
+      affinity:  # Настройка для распределения подов по зонам
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: my-web-app
+            topologyKey: "topology.kubernetes.io/zone"  # Распределение по зонам для обеспечения доступности
 
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
-  name: web-app
-  namespace: ns-app
+  name: my-web-app-service
 spec:
   selector:
-    app: web-app
+    app: my-web-app
   ports:
-    - name: http-web
-      port: 80
-      targetPort: 8080
-  type: LoadBalancer
+  - protocol: TCP
+    port: 80  # Порт сервиса
+    targetPort: 80  # Порт контейнера
+  type: LoadBalancer  # Тип сервиса для внешнего доступа к приложению
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: my-web-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-web-app
+  minReplicas: 3  # Минимальное количество реплик
+  maxReplicas: 10  # Максимальное количество реплик для масштабирования
+  targetCPUUtilizationPercentage: 70  # Целевое использование CPU для автоматического масштабирования
